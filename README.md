@@ -27,6 +27,18 @@ A high-performance, browser-based 3D Human Anatomy Atlas and Live Radiographic X
 
 ---
 
+## Guided Tours and Dynamic 3D Labels Engine
+
+- **Curated High-Yield Anatomical Tours:**
+  - **Dental and TMJ Occlusion Tour:** Sequential guided trajectory covering adult dentition (FDI #11-#48), mandible condyles and mental foramen, maxillary alveolar process, masseter, and temporalis.
+  - **Cranial Vault and Skull Base Tour:** Frontal bone, parietal vault, temporal TMJ glenoid fossa, occipital condyles, and sphenoid sella turcica.
+  - **Neuroanatomy Centers Tour:** Primary motor cortex (M1), somatosensory cortex (S1), auditory cortex (A1), visual cortex (V1), cerebellum, and medulla oblongata.
+  - **Facial Architecture Tour:** Frontalis, orbicularis oculi, zygomatic arch, and orbicularis oris.
+- **On-Screen 3D Labels Dynamic Callout System:**
+  - One-click on-screen toggle button (`#labels-toggle-btn` in top header, `#tour-labels-btn` in tour bar) and keyboard shortcut (`L`) to dynamically show or hide anatomical callouts.
+  - **Dual-Pass High-Contrast Rendering:** High-contrast background contour halos and leader lines ensure zero washout and crisp readability against both solid diagnostic PBR backdrops and glowing radiographic Fresnel X-ray shaders.
+  - **Active Focal Target Ping:** Animated radiating radar ping markers dynamically spotlight the active structure during guided tour navigation.
+
 ## Core Technical Features
 
 - **Dual Shader Rendering Pipeline:**
@@ -61,6 +73,7 @@ python -m http.server 8080
 ```
 
 ### Keyboard Shortcuts
+- `L` : Toggle on-screen 3D labels
 - `/` : Focus search input
 - `Esc` : Close detail card or clear search
 - `Space` : Reset camera view
