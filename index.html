@@ -2325,6 +2325,32 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       hand = await mkM(mod.HandLandmarker, MD + 'hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task', { numHands: 2 });
     }
 
+    
+    let isFramingUpdating = false;
+    function updateCameraFraming() {
+      if (!camP || isFramingUpdating) return;
+      isFramingUpdating = true;
+      try {
+        const card = $('anatomy-detail-card');
+        const isCardVisible = card && card.classList.contains('visible') && !card.classList.contains('minimized');
+        const isMobile = window.innerWidth <= 768 || window.innerWidth < window.innerHeight;
+
+        if (isMobile && isCardVisible) {
+          const cardH = (card && card.offsetHeight > 50) ? card.offsetHeight : (window.innerHeight * 0.48);
+          const yOffset = Math.round(cardH * 0.54);
+          camP.setViewOffset(window.innerWidth, window.innerHeight, 0, yOffset, window.innerWidth, window.innerHeight);
+        } else if (!isMobile && isCardVisible) {
+          const cardW = (card && card.offsetWidth > 100) ? card.offsetWidth : 350;
+          const xOffset = Math.round(cardW * 0.32);
+          camP.setViewOffset(window.innerWidth, window.innerHeight, -xOffset, 0, window.innerWidth, window.innerHeight);
+        } else {
+          camP.clearViewOffset();
+        }
+      } finally {
+        isFramingUpdating = false;
+      }
+    }
+
     function updateDimensions() {
       W = window.innerWidth;
       H = window.innerHeight;
@@ -2542,15 +2568,21 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       document.body.classList.remove('detail-active');
       document.body.classList.remove('detail-minimized');
       activeStructure = null;
+      updateCameraFraming();
     }
 
     function focusOnStructure(name) {
       const item = META.find(m => m.n === name);
       if (item && item.c && controls) {
         controls.target.set(item.c[0], item.c[1], item.c[2]);
+        const targetVec = new THREE.Vector3(item.c[0], item.c[1], item.c[2]);
+        const camDir = camP.position.clone().sub(controls.target).normalize();
+        const idealDist = Math.max(14, (item.h || 6) * 2.8);
+        camP.position.copy(targetVec).add(camDir.multiplyScalar(idealDist));
         controls.update();
       }
       showDetailCard(name);
+      updateCameraFraming();
     }
 
     function toggleSoloStructure(name) {
@@ -2650,6 +2682,7 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       document.body.classList.toggle('detail-minimized', isMin);
       if (minDetailBtn) minDetailBtn.setAttribute('title', isMin ? 'Expand Card' : 'Minimize Card');
       if (minDetailIcon) minDetailIcon.style.transform = isMin ? 'rotate(180deg)' : 'rotate(0deg)';
+      updateCameraFraming();
     }
 
     if (minDetailBtn) minDetailBtn.onclick = toggleMinimizeDetailCard;
@@ -2673,6 +2706,7 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
 
     
     // Expose detail card controls for global & testing access
+    window.focusOnStructure = focusOnStructure;
     window.showDetailCard = showDetailCard;
     window.hideDetailCard = hideDetailCard;
 
