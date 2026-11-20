@@ -445,8 +445,11 @@
       border-radius: 50%;
     }
 
+    .slider {
+      background-color: #cbd5e1;
+    }
     input:checked + .slider {
-      background-color: var(--text-primary);
+      background-color: #0284c7;
     }
 
     input:checked + .slider:before {
@@ -461,7 +464,7 @@
       justify-content: space-between;
       font-size: 11px;
       color: var(--text-muted);
-      background: rgba(255, 255, 255, 0.5);
+      background: rgba(15, 23, 42, 0.04);
     }
 
     .card-footer-btn {
@@ -799,13 +802,16 @@
     /* Responsive Overhaul for Mobile & Tablet (<= 768px) */
     @media (max-width: 768px) {
       .top-header {
+        position: absolute;
         top: 12px;
         left: 12px;
         right: 12px;
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-end;
         gap: 8px;
+        pointer-events: none;
+        z-index: 30;
       }
       .header-branding {
         display: none !important;
@@ -814,16 +820,22 @@
         display: none;
       }
       .header-actions {
-        display: flex;
+        display: flex !important;
         align-items: center;
         gap: 6px;
+        margin-left: auto;
+        pointer-events: auto;
       }
       .icon-btn {
         width: 32px;
         height: 32px;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
       }
 
       .preset-strip {
+        position: absolute;
         top: 12px;
         left: 12px;
         right: auto;
@@ -832,6 +844,7 @@
         padding: 2px 4px;
         gap: 2px;
         border-radius: var(--radius-lg);
+        z-index: 25;
       }
       .preset-btn {
         width: 28px;
@@ -988,13 +1001,62 @@
     body.xray-theme .search-box input {
       color: #f8fafc;
     }
-    body.xray-theme .subdock-btn.active {
-      background: #0284c7;
-      color: #ffffff;
-      border-color: #38bdf8;
+    body.xray-theme .tab-pill,
+    body.xray-theme .mode-btn,
+    body.xray-theme .subdock-btn,
+    body.xray-theme .preset-btn {
+      color: #94a3b8;
     }
+    body.xray-theme .tab-pill:hover,
+    body.xray-theme .mode-btn:hover,
+    body.xray-theme .subdock-btn:hover,
+    body.xray-theme .preset-btn:hover {
+      color: #f8fafc;
+    }
+    body.xray-theme .tab-pill.active,
+    body.xray-theme .mode-btn.active,
+    body.xray-theme .subdock-btn.active,
     body.xray-theme .preset-btn.active {
-      background: #0284c7;
+      background: #0284c7 !important;
+      color: #ffffff !important;
+      border-color: #38bdf8 !important;
+      box-shadow: 0 1px 4px rgba(2, 132, 199, 0.4) !important;
+    }
+    body.xray-theme .tab-pills,
+    body.xray-theme .mode-switch,
+    body.xray-theme .subdock-seg {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    body.xray-theme .system-name {
+      color: #f8fafc;
+    }
+    body.xray-theme .system-count {
+      color: #94a3b8;
+    }
+    body.xray-theme .mobile-systems-btn {
+      background: rgba(15, 23, 42, 0.85);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+    }
+    body.xray-theme .slider {
+      background-color: #334155;
+    }
+    body.xray-theme input:checked + .slider {
+      background-color: #0284c7;
+    }
+    body.xray-theme .slider:before {
+      background-color: #ffffff;
+    }
+    body.xray-theme .card-footer {
+      background: rgba(11, 19, 36, 0.95);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+    }
+    body.xray-theme .card-footer-btn {
+      color: #38bdf8;
+    }
+    body.xray-theme .card-footer-btn:hover {
       color: #ffffff;
     }
 
@@ -1230,7 +1292,7 @@
   }
   </script>
 </head>
-<body>
+<body class="xray-theme">
   <div id="systems-backdrop" class="modal-backdrop"></div>
 
   <!-- Stage Viewport -->
@@ -1776,7 +1838,9 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       const G = {};
       labs.forEach(l => (G[l.g] = G[l.g] || []).push(l));
 
+      const isMobile = W <= 768;
       const pad = 12;
+      const isXrayVisual = S.look === 'xray' || S.mode === 'xray' || document.body.classList.contains('xray-theme');
 
       for (const k in G) {
         let y = -1e9;
@@ -1786,29 +1850,44 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
           const tw = ox.measureText(l.t).width;
 
           let targetX, textX, textAlign;
-          if (isLeft) {
-            textAlign = 'left';
-            textX = pad;
-            targetX = pad + tw + 6;
+          if (isMobile) {
+            // Mobile: Pin to edges to prevent text clipping on narrow viewports
+            if (isLeft) {
+              textAlign = 'left';
+              textX = pad;
+              targetX = pad + tw + 6;
+            } else {
+              textAlign = 'right';
+              textX = W - pad;
+              targetX = W - pad - tw - 6;
+            }
           } else {
-            textAlign = 'right';
-            textX = W - pad;
-            targetX = W - pad - tw - 6;
+            // PC / Desktop: Keep labels close to the anatomical model with short leader lines
+            const span = Math.min(220, Math.max(150, W * 0.13));
+            if (isLeft) {
+              textAlign = 'right';
+              textX = Math.max(pad + 40, l.a[0] - span);
+              targetX = textX + 6;
+            } else {
+              textAlign = 'left';
+              textX = Math.min(W - pad - 40, l.a[0] + span);
+              targetX = textX - 6;
+            }
           }
 
-          ox.strokeStyle = S.mode == 'xray' ? 'rgba(210,230,255,.45)' : 'rgba(2,132,199,.35)';
+          ox.strokeStyle = isXrayVisual ? 'rgba(210, 230, 255, 0.65)' : 'rgba(2, 132, 199, 0.4)';
           ox.lineWidth = 1;
           ox.beginPath();
           ox.moveTo(l.a[0], l.a[1]);
           ox.lineTo(targetX, y);
           ox.stroke();
 
-          ox.fillStyle = S.mode == 'xray' ? '#fff' : '#0284c7';
+          ox.fillStyle = isXrayVisual ? '#ffffff' : '#0284c7';
           ox.beginPath();
-          ox.arc(l.a[0], l.a[1], 2, 0, Math.PI * 2);
+          ox.arc(l.a[0], l.a[1], 2.5, 0, Math.PI * 2);
           ox.fill();
 
-          ox.fillStyle = S.mode == 'xray' ? '#e8f3ff' : '#0f172a';
+          ox.fillStyle = isXrayVisual ? '#ffffff' : '#0f172a';
           ox.textAlign = textAlign;
           ox.fillText(l.t, textX, y);
         });
@@ -2377,6 +2456,7 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
 
     // Start App
     updateDimensions();
+    applyLook();
     await loadAnat();
     applyLook();
     if (!started) {
