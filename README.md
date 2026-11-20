@@ -2,9 +2,7 @@
 
 A high-performance, browser-based 3D Human Anatomy Atlas and Live Radiographic X-Ray Augmented Reality explorer designed for medical, dental, and neuroanatomy education.
 
-<div align="center">
-  <img src="assets/xray-animated-preview.svg" alt="Human Anatomy 3D & X-Ray Scanner" width="100%" />
-</div>
+![Human Anatomy 3D and X-Ray Scanner](assets/xray-animated-preview.svg)
 
 ---
 
