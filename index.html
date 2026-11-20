@@ -1390,6 +1390,7 @@
 
     <div class="tab-pills">
       <button class="tab-pill active" data-p="all">All</button>
+      <button class="tab-pill" data-p="dental">Dental</button>
       <button class="tab-pill" data-p="skeleton">Skeleton</button>
       <button class="tab-pill" data-p="organs">Organs</button>
     </div>
@@ -1478,6 +1479,7 @@
   <nav class="preset-strip">
     <button class="preset-btn active" data-view="three-quarter" title="Three-Quarter Perspective">&frac34;</button>
     <button class="preset-btn" data-view="front" title="Front View (Coronal)">F</button>
+    <button class="preset-btn" data-view="dental" title="Dental & TMJ Occlusion Focus">D</button>
     <button class="preset-btn" data-view="side" title="Side View (Sagittal)">S</button>
     <button class="preset-btn" data-view="back" title="Back View (Occipital)">B</button>
     <div class="preset-divider"></div>
@@ -2111,6 +2113,12 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       rend.setSize(W, H);
 
       camP.aspect = W / H;
+      if (W < H) {
+        // Mobile portrait: increase FOV so skull is zoomed out ~25% with comfortable margins
+        camP.fov = 40 + (1.0 - W / H) * 22;
+      } else {
+        camP.fov = 40;
+      }
       camP.updateProjectionMatrix();
 
       camO.right = W;
@@ -2157,8 +2165,10 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
 
         glc.style.transform = 'none';
         glc.style.opacity = '1.0';
-        camP.fov = 40;
-        camP.position.set(28.0, 15.0, 34.0);
+        if (W < H) camP.fov = 40 + (1.0 - W / H) * 22;
+        else camP.fov = 40;
+        const sc = (W < H) ? 1.18 : 1.0;
+        camP.position.set(28.0 * sc, 15.0 * sc, 34.0 * sc);
         camP.updateProjectionMatrix();
         controls.target.set(0, 1.5, -3.5);
         controls.enabled = true;
@@ -2191,7 +2201,8 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       $('explode-slider').value = 0;
       $('exv').textContent = '0%';
       if (S.mode == 'studio') {
-        camP.position.set(28.0, 15.0, 34.0);
+        const sc = (W < H) ? 1.18 : 1.0;
+        camP.position.set(28.0 * sc, 15.0 * sc, 34.0 * sc);
         controls.target.set(0, 1.5, -3.5);
         controls.update();
         document.querySelectorAll('.preset-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view == 'three-quarter'));
@@ -2203,12 +2214,26 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       b.onclick = () => {
         if (S.mode == 'xray') return;
         document.querySelectorAll('.preset-btn[data-view]').forEach(x => x.classList.toggle('active', x == b));
-        const view = b.dataset.view, dist = 52.0;
-        controls.target.set(0, 1.5, -3.5);
-        if (view == 'three-quarter') camP.position.set(28.0, 15.0, 34.0);
-        else if (view == 'front') camP.position.set(0, 1.5, -3.5 + dist);
-        else if (view == 'side') camP.position.set(dist, 1.5, -3.5);
-        else if (view == 'back') camP.position.set(0, 1.5, -3.5 - dist);
+        const view = b.dataset.view;
+        const isPort = W < H;
+        const dist = isPort ? 62.0 : 52.0;
+        if (view == 'dental') {
+          controls.target.set(0, -4.5, 3.0);
+          camP.position.set(0, -3.5, 3.0 + (isPort ? 32.0 : 25.0));
+          showDetailCard('Teeth');
+        } else {
+          controls.target.set(0, 1.5, -3.5);
+          if (view == 'three-quarter') {
+            const sc = isPort ? 1.18 : 1.0;
+            camP.position.set(28.0 * sc, 15.0 * sc, 34.0 * sc);
+          } else if (view == 'front') {
+            camP.position.set(0, 1.5, -3.5 + dist);
+          } else if (view == 'side') {
+            camP.position.set(dist, 1.5, -3.5);
+          } else if (view == 'back') {
+            camP.position.set(0, 1.5, -3.5 - dist);
+          }
+        }
         controls.update();
       };
     });
@@ -2388,12 +2413,23 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       b.onclick = () => {
         document.querySelectorAll('[data-p]').forEach(x => x.classList.toggle('active', x == b));
         const p = b.dataset.p;
-        const sk = p != 'organs', og = p != 'skeleton';
-        S.skull = S.hand = sk ? 1 : 0;
-        S.brain = S.musc = S.eye = og ? 1 : 0;
-        document.querySelectorAll('input[type=checkbox][data-k]').forEach(i => {
-          if (i.dataset.k in S) i.checked = !!S[i.dataset.k];
-        });
+        if (p == 'dental') {
+          // Dental Student Focus: Isolate maxilla, mandible, teeth, masticatory muscles
+          S.skull = 1;
+          S.musc = 1;
+          S.brain = S.eye = S.hand = 0;
+          document.querySelectorAll('input[type=checkbox][data-k]').forEach(i => {
+            if (i.dataset.k in S) i.checked = !!S[i.dataset.k];
+          });
+          focusOnStructure('Teeth');
+        } else {
+          const sk = p != 'organs', og = p != 'skeleton';
+          S.skull = S.hand = sk ? 1 : 0;
+          S.brain = S.musc = S.eye = og ? 1 : 0;
+          document.querySelectorAll('input[type=checkbox][data-k]').forEach(i => {
+            if (i.dataset.k in S) i.checked = !!S[i.dataset.k];
+          });
+        }
       };
     });
 
