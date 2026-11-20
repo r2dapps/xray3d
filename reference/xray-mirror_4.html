@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta http-equiv="Permissions-Policy" content="camera=*, microphone=*, display-capture=*">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="alternate icon" href="favicon.ico">
   <title>Human Anatomy 3D &middot; Medical Spatial Explorer</title>
   <style>
     :root {
@@ -1200,6 +1203,92 @@
       border-radius: var(--radius-sm);
       cursor: pointer;
     }
+    .detail-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .detail-header-btn {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: background 0.15s ease, color 0.15s ease, transform 0.2s ease;
+    }
+    .detail-header-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text-primary);
+    }
+    .detail-header-btn:active {
+      transform: scale(0.92);
+    }
+    body.xray-theme .detail-header-btn {
+      color: #94a3b8;
+    }
+    body.xray-theme .detail-header-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #f8fafc;
+    }
+    .card-drag-handle {
+      display: none;
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--text-muted);
+      opacity: 0.45;
+      margin: 4px auto 8px;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .card-drag-handle:hover {
+      opacity: 0.8;
+    }
+
+    /* Minimized Detail Card State */
+    .anatomy-detail-card.minimized {
+      padding: 8px 12px !important;
+      gap: 0 !important;
+      max-height: 44px !important;
+      overflow: hidden !important;
+      cursor: pointer;
+    }
+    .anatomy-detail-card.minimized .detail-card-body,
+    .anatomy-detail-card.minimized .detail-card-actions,
+    .anatomy-detail-card.minimized .detail-latin {
+      display: none !important;
+    }
+    .anatomy-detail-card.minimized .detail-card-header {
+      width: 100%;
+      align-items: center;
+    }
+    .anatomy-detail-card.minimized .detail-title-group {
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+    }
+    .anatomy-detail-card.minimized .detail-title {
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    .anatomy-detail-card.minimized .detail-category-badge {
+      font-size: 8px;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #min-detail-icon {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
     .detail-close-btn:hover {
       background: var(--surface-hover);
       color: var(--text-primary);
@@ -1279,6 +1368,15 @@
         right: 12px;
         width: auto;
         max-height: 48vh;
+        transition: max-height 0.25s cubic-bezier(0.16, 1, 0.3, 1), padding 0.2s ease, bottom 0.2s ease;
+      }
+      .anatomy-detail-card.minimized {
+        bottom: 74px !important;
+        max-height: 42px !important;
+        z-index: 45;
+      }
+      .card-drag-handle {
+        display: block;
       }
     }
   
@@ -1344,9 +1442,14 @@
         <h2 class="detail-title" id="detail-title">Mandible</h2>
         <span class="detail-latin" id="detail-latin">Mandibula</span>
       </div>
-      <button class="detail-close-btn" id="close-detail-btn" title="Close Panel">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
+      <div class="detail-header-actions">
+        <button class="detail-header-btn" id="min-detail-btn" title="Minimize / Expand Detail Card">
+          <svg id="min-detail-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </button>
+        <button class="detail-header-btn" id="close-detail-btn" title="Close Panel">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
     </div>
     <div class="detail-card-body">
       <div class="detail-section">
@@ -1378,6 +1481,7 @@
 
   <!-- Systems Card -->
   <aside class="systems-card" id="systems-card">
+    <div class="card-drag-handle" id="systems-drag-handle" title="Dismiss Systems Panel"></div>
     <div class="card-header">
       <div class="card-title-group">
         <span class="card-title">Systems</span>
@@ -2390,6 +2494,44 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       };
     }
 
+    // Global defensive guard for external extension scripts
+    window.addEventListener('error', e => {
+      if (e?.filename?.includes('share-modal') || e?.message?.includes('share-modal') || e?.filename?.includes('chext')) {
+        e.preventDefault();
+      }
+    });
+
+    const detailCardEl = $('anatomy-detail-card');
+    const minDetailBtn = $('min-detail-btn');
+    const minDetailIcon = $('min-detail-icon');
+
+    function toggleMinimizeDetailCard(e) {
+      if (e) e.stopPropagation();
+      detailCardEl.classList.toggle('minimized');
+      const isMin = detailCardEl.classList.contains('minimized');
+      if (minDetailBtn) minDetailBtn.setAttribute('title', isMin ? 'Expand Card' : 'Minimize Card');
+      if (minDetailIcon) minDetailIcon.style.transform = isMin ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+
+    if (minDetailBtn) minDetailBtn.onclick = toggleMinimizeDetailCard;
+
+    const detailCardHeaderEl = document.querySelector('.detail-card-header');
+    if (detailCardHeaderEl) {
+      detailCardHeaderEl.onclick = e => {
+        if (detailCardEl.classList.contains('minimized') && !e.target.closest('#close-detail-btn')) {
+          toggleMinimizeDetailCard(e);
+        }
+      };
+    }
+
+    const sysDragEl = $('systems-drag-handle');
+    if (sysDragEl) {
+      sysDragEl.onclick = () => {
+        $('systems-card').classList.remove('drawer-open');
+        $('systems-backdrop').classList.remove('active');
+      };
+    }
+
     $('close-detail-btn').onclick = hideDetailCard;
     $('detail-focus-btn').onclick = () => { if (activeStructure) focusOnStructure(activeStructure); };
     $('detail-solo-btn').onclick = () => { if (activeStructure) toggleSoloStructure(activeStructure); };
@@ -2500,5 +2642,12 @@ const META=[{"n":"Frontal bone","l":"bone","c":[0.0984,8.131,0.7524],"h":7.09722
       render();
     }
   </script>
+  <!-- Extension & third-party script defensive DOM stubs -->
+  <div id="share-modal" class="share-modal" style="display:none;" aria-hidden="true">
+    <button id="share-btn" class="share-btn"></button>
+    <button id="share-button" class="share-button"></button>
+    <button id="close-share-btn"></button>
+    <button id="close-share-modal"></button>
+  </div>
 </body>
 </html>
