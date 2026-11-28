@@ -1,0 +1,19 @@
+{
+  "name": "Human Anatomy 3D - Clinical Atlas & Radiograph",
+  "short_name": "Anatomy 3D",
+  "description": "High-fidelity clinical 3D anatomical atlas and real-time AR radiograph mirror.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#060b13",
+  "theme_color": "#060b13",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
